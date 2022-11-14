@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  This is a SAM template for iot-api which is a Serverless API for
+  composing and managing IOT devices.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+
+Parameters:
+  ExecEnv:
+    Type: String
+    AllowedValues:
+      - local
+      - dev
+      - stage
+      - prod
+    Default: prod
+  IOTDevicesTableName:
+    Type: String
+    Default: iot-devices
+  IOTDeviceSensorsTableName:
+    Type: String
+    Default: iot-device-sensors
+  IOTDeviceSensorsDataTableName:
+    Type: String
+    Default: iot-device-sensors-data
+
+
+Resources:
+  IOTDevicesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: flask_api/
+      Handler: app.app
+      Runtime: python3.9
+      Environment:
+        Variables:
+          DEVICES_TABLE_NAME: !Ref IOTDevicesTableName
+          DEVICE_SENSORS_TABLE_NAME: !Ref IOTDeviceSensorsTableName
+          DEVICE_SENSORS_DATA_TABLE_NAME: !Ref IOTDeviceSensorsDataTableName
+          REGION_NAME: !Ref AWS::Region
+          EXEC_ENV: !Ref ExecEnv
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IOTDevicesTable
+      Events:
+        GetDevices:
+          Type: Api
+          Properties:
+            Path: /devices
+            Method: get
+        CreateDevice:
+          Type: Api
+          Properties:
+            Path: /device
+            Method: post
+        UpdateDevice:
+          Type: Api
+          Properties:
+            Path: /device/{id}
+            Method: put
+        AddSensorData:
+          Type: Api
+          Properties:
+            Path: /device/{id}/sensor/{sid}
+            Method: post
+        GetSensorData:
+          Type: Api
+          Properties:
+            Path: /device/sensor/data
+            Method: post
+
+  IOTDevicesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref IOTDevicesTableName
+      AttributeDefinitions:
+        - AttributeName: deviceId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: deviceId
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  IOTDeviceSensorsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref IOTDeviceSensorsTableName
+      AttributeDefinitions:
+        - AttributeName: sensorId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: sensorId
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  IOTDeviceSensorsDataTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref IOTDeviceSensorsDataTableName
+      AttributeDefinitions:
+        - AttributeName: sensorId
+          AttributeType: S
+        - AttributeName: timeKey
+          AttributeType: N
+      KeySchema:
+        - AttributeName: sensorId
+          KeyType: HASH
+        - AttributeName: timeKey
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  IOTDevicesApi:
+    Description: "API Gateway endpoint URL for Prod stage for get list of devices function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/devices"
+  IOTDevicesFunction:
+    Description: "IOT Devices Lambda Function ARN"
+    Value: !GetAtt IOTDevicesFunction.Arn
+  IOTDevicesFunctionIamRole:
+    Description: "Implicit IAM Role created for IOT Devices function"
+    Value: !GetAtt IOTDevicesFunctionRole.Arn
