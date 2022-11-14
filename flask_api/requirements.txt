@@ -1,5 +1,4 @@
 flask-lambda
 boto3
 requests
-flask
-werkzeug
+Werkzeug==2.0.3

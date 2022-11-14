@@ -1,6 +1,7 @@
 import os
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 import boto3
 from boto3.dynamodb.conditions import Key
@@ -32,23 +33,14 @@ def parse_user_id(req):
 
 def create_sensor(name, type):
     sensorId = str(uuid.uuid4())
+    print(sensorId)
     tbl = db_table(DEVICE_SENSORS_TABLE_NAME)
     tbl.put_item(Item={
-        "sensorId": {
-            "S": sensorId
-        },
-        "sensorName": {
-            "S": name
-        },
-        "sensorType": {
-            "S": type
-        },
-        "createdAt": {
-            "N": datetime.utcnow().timestamp() * 1000
-        },
-        "updatedAt": {
-            "N": datetime.utcnow().timestamp() * 1000
-        }
+        "sensorId": sensorId,
+        "sensorName": name,
+        "sensorType": type,
+        "createdAt": Decimal(datetime.utcnow().timestamp() * 1000),
+        "updatedAt": Decimal(datetime.utcnow().timestamp() * 1000)
     })
     return sensorId
 
@@ -75,7 +67,7 @@ def create_device():
     tempSensorId = create_sensor('temp_sensor', 'TEMP')
     pressureSensorId = create_sensor('pressure_sensor', 'PRESSURE')
     device_data = request.get_json()
-    createdAt = datetime.utcnow().timestamp() * 1000
+    createdAt = Decimal(datetime.utcnow().timestamp() * 1000)
     device_data.update(userId=user_id, deviceId=deviceId, sensors=[tempSensorId, pressureSensorId], createdAt=createdAt, updatedAt=createdAt)
     tbl = db_table()
     tbl.put_item(Item=device_data)
@@ -107,28 +99,16 @@ def add_sensor_data(device_id, sensor_id):
 
     reqParam = request.get_json()
     sensorDataItem = {
-        "sensorId": {
-            "S": sensor_id
-        },
-        "deviceId": {
-            "S": device_id
-        },
-        "timeKey": {
-            "N": reqParam['timeKey']
-        },
-        "data": {
-            "S": reqParam['data']
-        },
-        "createdAt": {
-            "N": datetime.utcnow().timestamp() * 1000
-        },
-        "updatedAt": {
-            "N": datetime.utcnow().timestamp() * 1000
-        }
+        "sensorId": sensor_id,
+        "deviceId": device_id,
+        "timeKey": Decimal(str(reqParam['timeKey'])),
+        "data": str(reqParam['data']),
+        "createdAt": Decimal(datetime.utcnow().timestamp() * 1000),
+        "updatedAt": Decimal(datetime.utcnow().timestamp() * 1000)
     }
     tbl = db_table(DEVICE_SENSORS_DATA_TABLE_NAME)
     tbl.put_item(Item=sensorDataItem)
-    tbl_response = tbl.get_item(Key={'time_key': reqParam['timeKey'], 'deviceId': device_id, 'sensorId': sensor_id})
+    tbl_response = tbl.get_item(Key={'timeKey': Decimal(str(reqParam['timeKey'])), 'sensorId': sensor_id})
     return jsonify(tbl_response['Item']), 200
 
 
@@ -141,7 +121,7 @@ def get_sensor_data():
 
     try:
         reqParam = request.get_json()
-        result = db_table(DEVICE_SENSORS_DATA_TABLE_NAME).query(KeyConditionExpression=(Key('sensorId').eq(reqParam['sensorId']) & Key('deviceId').eq(reqParam['deviceid']) & Key('timeKey').between(reqParam['start_time_key'], reqParam['end_time_key'])))
+        result = db_table(DEVICE_SENSORS_DATA_TABLE_NAME).query(KeyConditionExpression=(Key('sensorId').eq(reqParam['sensorId']) & Key('timeKey').between(Decimal(str(reqParam['start_time_key'])), Decimal(str(reqParam['end_time_key'])))))
         return jsonify(result['Items'])
     except:
         return jsonify({'error': True, 'msg': 'something went wrong'})
