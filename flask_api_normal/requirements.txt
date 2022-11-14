@@ -1,0 +1,8 @@
+bcrypt
+Flask
+Flask-Bcrypt
+Flask-Cors
+PyJWT
+Werkzeug
+boto3
+requests

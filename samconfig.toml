@@ -1,0 +1,12 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "iot-api-v1"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-rin2849y5btp"
+s3_prefix = "iot-api-v1"
+region = "us-east-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "ExecEnv=\"prod\" IOTDevicesTableName=\"iot-devices\" IOTDeviceSensorsTableName=\"iot-device-sensors\" IOTDeviceSensorsDataTableName=\"iot-device-sensors-data\""
+image_repositories = []

@@ -1,0 +1,5 @@
+flask-lambda
+boto3
+requests
+flask
+werkzeug
