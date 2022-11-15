@@ -46,6 +46,10 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref IOTDevicesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IOTDeviceSensorsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref IOTDeviceSensorsDataTable
       Events:
         GetDevices:
           Type: Api

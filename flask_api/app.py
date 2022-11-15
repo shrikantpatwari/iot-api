@@ -17,20 +17,22 @@ DEVICE_SENSORS_DATA_TABLE_NAME = os.environ['DEVICE_SENSORS_DATA_TABLE_NAME']
 
 app = FlaskLambda(__name__)
 
+#Set dynamodb instance as per EXEC_ENV
 if EXEC_ENV == 'local':
     dynamodb = boto3.resource('dynamodb', endpoint_url='http://dynamodb:8000')
 else:
     dynamodb = boto3.resource('dynamodb', region_name=REGION)
 
-
+# Helper function to get dynamodb table instance defaults to iot-devices
 def db_table(table_name=DEVICES_TABLE_NAME):
     return dynamodb.Table(table_name)
 
-
+# helper function check for the Authorization header to get user info
 def parse_user_id(req):
     '''this will parse and decode token to get user identification'''
     return req.headers['Authorization'].split()[1]
 
+# Creates the sensor for a device
 def create_sensor(name, type):
     sensorId = str(uuid.uuid4())
     print(sensorId)
@@ -44,7 +46,7 @@ def create_sensor(name, type):
     })
     return sensorId
 
-
+# API endpoint to get all the devices present in table requires auth
 @app.route('/devices')
 def get_devices():
     try:
@@ -55,7 +57,7 @@ def get_devices():
     tbl_response = db_table(DEVICES_TABLE_NAME).query(KeyConditionExpression=Key('userId').eq(user_id))
     return jsonify(tbl_response['Items'])
 
-
+# API endpoint to Add a device, require auth token
 @app.route('/device', methods=('POST',))
 def create_device():
     deviceId = str(uuid.uuid4())
@@ -74,7 +76,7 @@ def create_device():
     tbl_response = tbl.get_item(Key={'userId': user_id, 'deviceId': deviceId})
     return jsonify(tbl_response['Item']), 201
 
-
+# API endpoint to update device info e.g. deviceName
 @app.route('/device/<string:device_id>', methods=('PUT',))
 def update_device(device_id):
     try:
@@ -89,7 +91,7 @@ def update_device(device_id):
     tbl_response = db_table().get_item(Key={'userId': user_id, 'deviceId': device_id})
     return jsonify(tbl_response['Item'])
 
-
+# API endpoint to add sensor data
 @app.route('/device/<string:device_id>/sensor/<string:sensor_id>', methods=('POST',))
 def add_sensor_data(device_id, sensor_id):
     try:
@@ -111,7 +113,7 @@ def add_sensor_data(device_id, sensor_id):
     tbl_response = tbl.get_item(Key={'timeKey': Decimal(str(reqParam['timeKey'])), 'sensorId': sensor_id})
     return jsonify(tbl_response['Item']), 200
 
-
+# API endpoint to query any sensor data between any time period
 @app.route('/device/sensor/data', methods=('POST',))
 def get_sensor_data():
     try:
